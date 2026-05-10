@@ -6,6 +6,30 @@ const { generateTokens, verifyToken } = require('../utils/jwt')
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User registered successfully
+ *       400:
+ *         description: Username already exists
+ */
+
 router.post('/register', async (req, res) => {
   const db = readUser()
   const { username, password } = req.body
@@ -19,6 +43,30 @@ router.post('/register', async (req, res) => {
   res.json({ message: 'User registered successfully' })
 })
 
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Login and get tokens
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, password]
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Returns access and refresh tokens
+ *       400:
+ *         description: Invalid credentials
+ */
 router.post('/login', async (req, res) => {
   const { username, password } = req.body
   const db = readUser()
@@ -34,6 +82,28 @@ router.post('/login', async (req, res) => {
   res.json({ tokens })
 })
 
+/**
+ * @swagger
+ * /api/auth/refresh:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Returns a new access token
+ *       400:
+ *         description: Invalid refresh token
+ */
 router.post('/refresh', (req, res) => {
   const { refreshToken } = req.body
   const decoded = verifyToken(refreshToken)
