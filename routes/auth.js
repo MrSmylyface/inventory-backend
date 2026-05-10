@@ -5,6 +5,7 @@ const { readUser, writeUser } = require('../utils/db')
 const { generateTokens, verifyToken } = require('../utils/jwt')
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
+const { sendWelcomeEmail } = require('../utils/email')
 
 /**
  * @swagger
@@ -21,6 +22,8 @@ require('dotenv').config()
  *             properties:
  *               username:
  *                 type: string
+ *               email:
+ *                 type: string
  *               password:
  *                 type: string
  *     responses:
@@ -32,14 +35,15 @@ require('dotenv').config()
 
 router.post('/register', async (req, res) => {
   const db = readUser()
-  const { username, password } = req.body
+  const { username, password, email } = req.body
   if (db.users.find(u => u.username === username)) {
     return res.status(400).json({ error: 'Username already exists' })
   }
   const hashedPassword = await bcrypt.hash(password, 10)
-  const newUser = { id: Date.now().toString(), username, password: hashedPassword }
+  const newUser = { id: Date.now().toString(), username, email, password: hashedPassword }
   db.users.push(newUser)
   writeUser(db)
+  await sendWelcomeEmail(email, username)
   res.json({ message: 'User registered successfully' })
 })
 
@@ -68,7 +72,7 @@ router.post('/register', async (req, res) => {
  *         description: Invalid credentials
  */
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body
+  const { username, password, } = req.body
   const db = readUser()
   const user = db.users.find(u => u.username === username)
   if (!user) {
