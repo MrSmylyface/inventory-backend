@@ -1,14 +1,15 @@
 const emailjs = require('@emailjs/nodejs')
 require('dotenv').config()
 
-async function sendWelcomeEmail(toEmail, username) {
+async function sendVerificationEmail(toEmail, username, code) {
   try {
     await emailjs.send(
       process.env.EMAILJS_SERVICE_ID,
       process.env.EMAILJS_TEMPLATE_ID,
       {
         username: username,
-        email: toEmail
+        email: toEmail,
+        code: code
       },
       {
         publicKey: process.env.EMAILJS_PUBLIC_KEY,
@@ -21,4 +22,4 @@ async function sendWelcomeEmail(toEmail, username) {
   }
 }
 
-module.exports = { sendWelcomeEmail }
+module.exports = { sendVerificationEmail }

@@ -5,7 +5,7 @@ const { readUser, writeUser } = require('../utils/db')
 const { generateTokens, verifyToken } = require('../utils/jwt')
 const jwt = require('jsonwebtoken')
 require('dotenv').config()
-const { sendWelcomeEmail } = require('../utils/email')
+const { sendVerificationEmail } = require('../utils/email')
 
 /**
  * @swagger
@@ -40,11 +40,51 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Username already exists' })
   }
   const hashedPassword = await bcrypt.hash(password, 10)
-  const newUser = { id: Date.now().toString(), username, email, password: hashedPassword }
+  const code = Math.floor(100000 + Math.random() * 900000).toString()
+  const newUser = { id: Date.now().toString(), username, email, password: hashedPassword, verified: false, verificationCode: code }
   db.users.push(newUser)
   writeUser(db)
-  await sendWelcomeEmail(email, username)
-  res.json({ message: 'User registered successfully' })
+  await sendVerificationEmail(email, username, code)
+  res.json({ message: 'User registered. Check your email for verification code.' })
+})
+
+/**
+ * @swagger
+ * /api/auth/verify:
+ *   post:
+ *     summary: Verify email with code
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid code
+ */
+router.post('/verify', (req, res) => {
+  const { username, code } = req.body
+  const db = readUser()
+  const user = db.users.find(u => u.username === username)
+  if (!user) {
+    return res.status(400).json({ error: 'User not found' })
+  }
+  if (user.verificationCode !== code) {
+    return res.status(400).json({ error: 'Invalid code' })
+  }
+  user.verified = true
+  user.verificationCode = null
+  writeUser(db)
+  res.json({ message: 'Email verified successfully' })
 })
 
 /**
@@ -77,6 +117,9 @@ router.post('/login', async (req, res) => {
   const user = db.users.find(u => u.username === username)
   if (!user) {
     return res.status(400).json({ error: 'Invalid credentials' })
+  }
+  if (!user.verified) {
+    return res.status(400).json({ error: 'Please verify your email first' })
   }
   const isMatch = await bcrypt.compare(password, user.password)
   if (!isMatch) {
